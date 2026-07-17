@@ -13,8 +13,8 @@
 
 可先透過 Gemini 分享連結直接體驗：
 
-👉 Gemini 分享版本：
-https://share.gemini.google/73pXfTFTbvvV
+👉 立即體驗版本：
+https://movenorthward.github.io/master-calendar/
 
 若您已將本專案部署至 GitHub Pages，可將正式網址填寫於此：
 
