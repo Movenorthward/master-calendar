@@ -11,7 +11,7 @@
 
 您不需要具備任何程式背景，也不需要安裝軟體。
 
-可先透過 Gemini 分享連結直接體驗：
+可先透過分享連結直接體驗：
 
 👉 立即體驗版本：
 https://movenorthward.github.io/master-calendar/
