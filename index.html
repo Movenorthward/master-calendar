@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>Master智能行事曆轉換器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&family=Noto+Sans+TC:wght=300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar optimized for elegant light mode */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        /* Prevent iOS Zoom on Input Focus */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+        @media (min-width: 768px) {
+            input, select, textarea {
+                font-size: 14px !important;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col selection:bg-emerald-100 selection:text-emerald-900 pb-16 lg:pb-0">
+
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-50 transition-all duration-300 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
+                    <i class="fa-solid fa-calendar-check text-emerald-600 text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <span class="font-black text-lg tracking-wide bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Master</span>
+                    <span class="text-xs text-slate-500 block sm:inline sm:ml-2">智能公文與訊息日曆轉換器</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-ping"></span>西元 2026 基準年
+                </span>
+                <button onclick="toggleApiKeyModal()" class="bg-white text-slate-600 hover:text-emerald-600 text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-emerald-300 hover:bg-slate-50 transition-all duration-200">
+                    <i class="fa-solid fa-key"></i>
+                    <span class="hidden md:inline">Gemini API 金鑰</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main id="topAnchor" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex flex-col lg:flex-row gap-6 sm:gap-8">
+        
+        <!-- Left Panel: Input with Multi-tabs -->
+        <div id="inputSection" class="w-full lg:w-[48%] flex flex-col gap-5 sm:gap-6">
+            
+            <!-- Tab Navigation Header (Scrollable on mobile) -->
+            <div class="flex border-b border-slate-200 bg-white p-1 rounded-xl shadow-sm overflow-x-auto scrollbar-none shrink-0 gap-1">
+                <button id="tabBtnLine" onclick="switchTab('line')" class="flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-1.5 transition-all shrink-0">
+                    <i class="fa-solid fa-comments"></i> LINE 訊息
+                </button>
+                <button id="tabBtnGongwen" onclick="switchTab('gongwen')" class="flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition-all shrink-0">
+                    <i class="fa-solid fa-file-invoice"></i> 公文行程
+                </button>
+                <button id="tabBtnImage" onclick="switchTab('image')" class="flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition-all shrink-0">
+                    <i class="fa-solid fa-image text-emerald-600"></i> 截圖影像
+                </button>
+            </div>
+
+            <!-- Content Panel: LINE Parser -->
+            <div id="panelLine" class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-message text-emerald-600"></i> LINE 訊息內容
+                    </h2>
+                    <button onclick="pasteFromClipboard('lineMessage')" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all active:scale-95">
+                        <i class="fa-solid fa-paste"></i> 一鍵貼上
+                    </button>
+                </div>
+                
+                <div class="relative">
+                    <textarea id="lineMessage" rows="11" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all placeholder:text-slate-400 resize-y"
+                        placeholder="請貼上或輸入含有時間、活動或會議資訊的 LINE 訊息內容..."></textarea>
+                </div>
+
+                <!-- Parse Options & Button -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-semibold text-slate-700">解析模式</span>
+                            <span class="text-[11px] text-slate-500" id="currentModeDescLine">本地規則解析（無須網路與金鑰）</span>
+                        </div>
+                        <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs shadow-sm">
+                            <button id="btnLocalModeLine" onclick="setMode('local')" class="px-3 py-1 rounded bg-emerald-600 text-white font-medium shadow-sm transition-all">本地</button>
+                            <button id="btnAiModeLine" onclick="setMode('ai')" class="px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all">AI (Gemini)</button>
+                        </div>
+                    </div>
+
+                    <button onclick="processMessage('line')" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-microchip animate-pulse"></i> 立即分析轉換為日曆事件
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Panel: Gongwen Parser -->
+            <div id="panelGongwen" class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-contract text-emerald-600"></i> 公文開會內容
+                    </h2>
+                    <button onclick="pasteFromClipboard('gongwenMessage')" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all active:scale-95">
+                        <i class="fa-solid fa-paste"></i> 一鍵貼上
+                    </button>
+                </div>
+                
+                <div class="relative">
+                    <textarea id="gongwenMessage" rows="11" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all placeholder:text-slate-400 resize-y"
+                        placeholder="請貼上或輸入公文主旨、開會時間、開會地點等開會通知單內容..."></textarea>
+                </div>
+
+                <!-- Parse Options & Button -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-semibold text-slate-700">解析模式</span>
+                            <span class="text-[11px] text-slate-500" id="currentModeDescGongwen">本地公文格式解析（無網路與金鑰）</span>
+                        </div>
+                        <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs shadow-sm">
+                            <button id="btnLocalModeGongwen" onclick="setMode('local')" class="px-3 py-1 rounded bg-teal-600 text-white font-medium shadow-sm transition-all">本地</button>
+                            <button id="btnAiModeGongwen" onclick="setMode('ai')" class="px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all">AI (Gemini)</button>
+                        </div>
+                    </div>
+
+                    <button onclick="processMessage('gongwen')" class="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-md shadow-teal-600/10 hover:shadow-teal-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-file-shield"></i> 解析公文並匯入行事曆
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Panel: Image Parser -->
+            <div id="panelImage" class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4 hidden">
+                <h2 class="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-image text-emerald-600"></i> 上傳或貼上螢幕截圖
+                </h2>
+
+                <!-- Drag & Drop / Paste Container -->
+                <div id="imageDropZone" ondragover="event.preventDefault()" ondrop="handleImageDrop(event)"
+                    class="border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/20 rounded-2xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[220px] relative">
+                    
+                    <!-- File input hidden behind -->
+                    <input type="file" id="imageFileInput" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleImageSelect(event)">
+                    
+                    <div id="dropZonePrompt" class="space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                        </div>
+                        <div class="text-xs sm:text-sm text-slate-600 font-medium">
+                            拖曳截圖至此、點選檔案上傳，或是直接 <strong class="text-emerald-600">貼上圖檔 (Ctrl+V)</strong>
+                        </div>
+                        <p class="text-[10px] text-slate-400">支援 PNG, JPG, WEBP 等對話截圖與公文照片</p>
+                    </div>
+
+                    <!-- Image Preview Area -->
+                    <div id="imagePreviewContainer" class="hidden w-full relative z-10">
+                        <img id="imagePreview" src="" alt="截圖預覽" class="max-h-52 rounded-xl mx-auto object-contain border border-slate-200 shadow-sm">
+                        <button onclick="clearUploadedImage(event)" class="absolute -top-2 -right-2 bg-rose-500 hover:bg-rose-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow transition-all active:scale-90" title="移除圖片">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 flex gap-2.5">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5 shrink-0"></i>
+                        <p class="text-[11px] text-amber-800 leading-relaxed">
+                            <strong>視覺解析說明：</strong>截圖解析採用多模態 AI 技術，<strong>必須先在右上角填寫您的 Gemini API 金鑰</strong> 才能進行影像分析。
+                        </p>
+                    </div>
+
+                    <button onclick="processImage()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles animate-pulse"></i> 立即提取並分析影像中的行程
+                    </button>
+                </div>
+            </div>
+
+            <!-- Fast Tips Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 text-xs text-slate-500 space-y-2.5 shadow-sm">
+                <h3 class="font-semibold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-info text-emerald-600"></i> 本地解析與行動優化
+                </h3>
+                <ul class="list-disc list-inside space-y-1.5 pl-1">
+                    <li><strong class="text-slate-700">自動定位</strong>：手機版送出解析後，畫面會自動滑順滾動至下方結果卡片。</li>
+                    <li><strong class="text-slate-700">防 iOS 縮放</strong>：針對手機端輸入欄位最佳化，點擊時再也不會導致螢幕異常拉近。</li>
+                    <li><strong class="text-slate-700">行動端貼上</strong>：支援在手機版上點選一鍵貼上，迅速傳送長段公文字句。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Right Panel: Output & Result -->
+        <div id="resultsSection" class="w-full lg:w-[52%] flex flex-col gap-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm flex-grow flex flex-col gap-5 min-h-[400px]">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 gap-3">
+                    <h2 class="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days text-emerald-600"></i> 解析出的日曆事件
+                    </h2>
+                    <div id="bulkActions" class="hidden flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                        <button onclick="addManualEvent()" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95">
+                            <i class="fa-solid fa-plus text-emerald-600"></i> 手動新增
+                        </button>
+                        <button onclick="exportAllICS()" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95">
+                            <i class="fa-solid fa-file-arrow-down text-emerald-600"></i> 批次 ICS
+                        </button>
+                        <button onclick="clearAllEvents()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95" title="清空全部行程">
+                            <i class="fa-solid fa-trash-can"></i> 清除全部
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden flex-grow flex-col items-center justify-center gap-4 py-12">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
+                        <div class="absolute inset-0 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin"></div>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm font-semibold text-slate-700" id="loadingText">正在處理與結構化您的日曆事件...</p>
+                        <p class="text-xs text-slate-400 mt-1">本地引擎秒級高速處理中</p>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="flex-grow flex flex-col items-center justify-center gap-4 text-center py-16">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-200/80 shadow-inner">
+                        <i class="fa-solid fa-calendar-minus text-3xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-slate-700">尚無解析事件</h3>
+                        <p class="text-xs text-slate-400 mt-1 max-w-sm px-4">在左側貼上文字、公文或截圖照片，並按下「分析轉換」，即可在此自動產生可直接匯入行事曆的精美事件卡片！</p>
+                    </div>
+                </div>
+
+                <!-- Event Cards Destination -->
+                <div id="eventsList" class="flex flex-col gap-4 overflow-y-auto max-h-[650px] pr-1 hidden">
+                    <!-- Event cards will be dynamically rendered here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Quick-Jump Floating Button (Displays on Mobile views only) -->
+    <div class="fixed bottom-6 right-6 z-40 lg:hidden flex flex-col gap-2 shadow-lg rounded-full">
+        <button id="mobileJumpBtn" onclick="toggleMobileSection()" class="w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-500 active:scale-90 text-white flex items-center justify-center shadow-lg border border-emerald-400 transition-all">
+            <i id="mobileJumpIcon" class="fa-solid fa-angles-down text-lg"></i>
+        </button>
+    </div>
+
+    <!-- API Key Config Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 m-4 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+            <button onclick="toggleApiKeyModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 bg-emerald-50 border border-emerald-100 rounded-lg">
+                    <i class="fa-solid fa-key text-emerald-600"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-slate-800 text-base">設定 Gemini API 金鑰</h3>
+                    <p class="text-xs text-slate-500">在本地執行先進的 AI 深度解析</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    本系統支援使用 <strong class="text-emerald-600">Gemini 3.5 / 2.5 Flash</strong> 系列視覺多模態模型。金鑰僅儲存於您個人的本地瀏覽器 (LocalStorage)，安全無虞。
+                </p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">API 金鑰 (API Key)</label>
+                    <input type="password" id="apiKeyInput" placeholder="請貼上您的 AIzaSy... 金鑰"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="saveApiKey()" class="flex-grow bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-sm">
+                        儲存金鑰
+                    </button>
+                    <button onclick="clearApiKey()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium py-2.5 px-4 rounded-xl transition-all">
+                        清除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-white border border-slate-200 text-slate-800 px-4 py-3 rounded-xl shadow-lg translate-y-20 opacity-0 transition-all duration-300 pointer-events-none max-w-xs sm:max-w-md">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-500 shrink-0"></i>
+        <span id="toastText" class="text-xs font-medium">儲存成功</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white text-slate-500 text-xs py-8 border-t border-slate-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-calendar-check text-emerald-600"></i>
+                <span class="font-medium text-slate-700">Master智能行事曆轉換器</span>
+                <span>©Master</span>
+            </div>
+            <div class="flex items-center space-x-4 text-center">
+                <span>西元 2026 基準年設定已啟用</span>
+                <span class="text-slate-300 hidden sm:inline">|</span>
+                <span class="text-emerald-600 font-medium block sm:inline">100% 瀏覽器本地安全處理</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Store parsed events globally
+        let currentEvents = [];
+        let deletedEventsStack = [];
+        let parseMode = 'local'; // 'local' or 'ai'
+        let currentTab = 'line'; // 'line', 'gongwen', 'image'
+        const BASE_YEAR = 2026; // Setting year standard equivalent to 115 Minguo
+
+        // Global base64 image data placeholder
+        let uploadedImageBase64 = '';
+        let uploadedImageMimeType = '';
+
+        window.onload = function () {
+            // Restore saved API key if present
+            const savedKey = localStorage.getItem('GEMINI_API_KEY');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
+
+            // Restore previously processed events if present
+            const savedEvents = localStorage.getItem('L2C_SAVED_EVENTS');
+            if (savedEvents) {
+                try {
+                    currentEvents = JSON.parse(savedEvents);
+                    renderEvents();
+                } catch(e) {
+                    console.error("無法復原先前快取的行事曆事件", e);
+                }
+            }
+
+            // Listen to page-wide Paste Events (for directly pasting screenshots!)
+            window.addEventListener('paste', handleGlobalPaste);
+
+            // Monitor scrolling to dynamically adjust the mobile floating navigation button icon
+            window.addEventListener('scroll', throttle(updateMobileJumpIcon, 200));
+        };
+
+        // Throttle helper to avoid performance lag on scrolls
+        function throttle(fn, wait) {
+            let time = Date.now();
+            return function() {
+                if ((time + wait - Date.now()) < 0) {
+                    fn();
+                    time = Date.now();
+                }
+            }
+        }
+
+        // Toggle focus between Input and Results dynamically on mobile
+        function toggleMobileSection() {
+            const resultsSec = document.getElementById('resultsSection');
+            const inputSec = document.getElementById('inputSection');
+            if (!resultsSec || !inputSec) return;
+            const rect = resultsSec.getBoundingClientRect();
+            
+            if (rect.top < window.innerHeight / 2) {
+                inputSec.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                resultsSec.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function updateMobileJumpIcon() {
+            const icon = document.getElementById('mobileJumpIcon');
+            const resultsSec = document.getElementById('resultsSection');
+            if (!icon || !resultsSec) return;
+
+            const rect = resultsSec.getBoundingClientRect();
+            if (rect.top < window.innerHeight / 2) {
+                icon.className = "fa-solid fa-angles-up text-lg";
+            } else {
+                icon.className = "fa-solid fa-angles-down text-lg";
+            }
+        }
+
+        // Global clipboard paste listener to capture screenshot images directly!
+        function handleGlobalPaste(e) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    processImageFile(blob);
+                    switchTab('image'); // Auto jump to the screenshot tab
+                    showToast("已成功貼上剪貼簿中的截圖！", "fa-file-image text-emerald-600");
+                    break;
+                }
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const btnLine = document.getElementById('tabBtnLine');
+            const btnGongwen = document.getElementById('tabBtnGongwen');
+            const btnImage = document.getElementById('tabBtnImage');
+            
+            const panelLine = document.getElementById('panelLine');
+            const panelGongwen = document.getElementById('panelGongwen');
+            const panelImage = document.getElementById('panelImage');
+
+            // Reset tab styles
+            [btnLine, btnGongwen, btnImage].forEach(btn => {
+                btn.className = "flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition-all shrink-0";
+            });
+            [panelLine, panelGongwen, panelImage].forEach(p => p.classList.add('hidden'));
+
+            if (tab === 'line') {
+                btnLine.className = "flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-1.5 transition-all shrink-0";
+                panelLine.classList.remove('hidden');
+            } else if (tab === 'gongwen') {
+                btnGongwen.className = "flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-teal-700 bg-teal-50 border border-teal-100 flex items-center justify-center gap-1.5 transition-all shrink-0";
+                panelGongwen.classList.remove('hidden');
+            } else if (tab === 'image') {
+                btnImage.className = "flex-1 min-w-[100px] py-2.5 px-3 text-xs font-bold rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-1.5 transition-all shrink-0";
+                panelImage.classList.remove('hidden');
+            }
+        }
+
+        function setMode(mode) {
+            parseMode = mode;
+            const lineDesc = document.getElementById('currentModeDescLine');
+            const gongwenDesc = document.getElementById('currentModeDescGongwen');
+            
+            const localBtnL = document.getElementById('btnLocalModeLine');
+            const aiBtnL = document.getElementById('btnAiModeLine');
+            const localBtnG = document.getElementById('btnLocalModeGongwen');
+            const aiBtnG = document.getElementById('btnAiModeGongwen');
+
+            if (mode === 'local') {
+                lineDesc.innerText = "本地規則解析（無須網路與金鑰）";
+                gongwenDesc.innerText = "本地公文格式解析（無網路與金鑰）";
+                
+                localBtnL.className = "px-3 py-1 rounded bg-emerald-600 text-white font-medium shadow-sm transition-all";
+                aiBtnL.className = "px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all";
+                
+                localBtnG.className = "px-3 py-1 rounded bg-teal-600 text-white font-medium shadow-sm transition-all";
+                aiBtnG.className = "px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all";
+            } else {
+                const apiKey = localStorage.getItem('GEMINI_API_KEY');
+                if (!apiKey) {
+                    showToast("使用 AI 深度解析模式前，請先點擊右上角設定 API 金鑰！", "fa-triangle-exclamation text-amber-500");
+                    toggleApiKeyModal();
+                    parseMode = 'local';
+                    return;
+                }
+
+                lineDesc.innerText = "AI 深度解析 (使用您的 Gemini API)";
+                gongwenDesc.innerText = "AI 深度解析 (使用您的 Gemini API)";
+                
+                localBtnL.className = "px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all";
+                aiBtnL.className = "px-3 py-1 rounded bg-emerald-600 text-white font-medium shadow-sm transition-all";
+                
+                localBtnG.className = "px-3 py-1 rounded text-slate-500 hover:text-slate-700 transition-all";
+                aiBtnG.className = "px-3 py-1 rounded bg-teal-600 text-white font-medium shadow-sm transition-all";
+            }
+        }
+
+        function handleImageDrop(e) {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                processImageFile(files[0]);
+            }
+        }
+
+        function handleImageSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                processImageFile(files[0]);
+            }
+        }
+
+        function processImageFile(file) {
+            const reader = new FileReader();
+            uploadedImageMimeType = file.type;
+            
+            reader.onload = function(event) {
+                const base64Data = event.target.result;
+                uploadedImageBase64 = base64Data.split(',')[1]; // Strip base64 prefix
+                
+                // Show preview
+                document.getElementById('imagePreview').src = base64Data;
+                document.getElementById('dropZonePrompt').classList.add('hidden');
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearUploadedImage(e) {
+            if (e) e.stopPropagation();
+            uploadedImageBase64 = '';
+            uploadedImageMimeType = '';
+            document.getElementById('imageFileInput').value = '';
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('dropZonePrompt').classList.remove('hidden');
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        // Formats Date objects consistently to YYYY-MM-DD
+        function formatDate(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseRelativeDate(text) {
+            const baseDate = new Date('2026-07-11'); // Simulation reference date
+            const cleanText = text.trim();
+
+            if (cleanText.includes("今天")) {
+                return formatDate(baseDate);
+            }
+            if (cleanText.includes("明天")) {
+                const d = new Date(baseDate);
+                d.setDate(baseDate.getDate() + 1);
+                return formatDate(d);
+            }
+            if (cleanText.includes("後天")) {
+                const d = new Date(baseDate);
+                d.setDate(baseDate.getDate() + 2);
+                return formatDate(d);
+            }
+
+            const weekdays = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "日": 0, "天": 0 };
+            const nextWeekMatch = cleanText.match(/下週([一二三四五六日天])/);
+            if (nextWeekMatch) {
+                const targetDay = weekdays[nextWeekMatch[1]];
+                const currentDay = baseDate.getDay(); 
+                let daysToAdd = (7 - currentDay) + targetDay;
+                if (daysToAdd <= 0) daysToAdd += 7;
+                const d = new Date(baseDate);
+                d.setDate(baseDate.getDate() + daysToAdd);
+                return formatDate(d);
+            }
+
+            const thisWeekMatch = cleanText.match(/這週([一二三四五六日天])|本週([一二三四五六日天])/);
+            if (thisWeekMatch) {
+                const targetDay = weekdays[thisWeekMatch[1] || thisWeekMatch[2]];
+                const currentDay = baseDate.getDay(); 
+                const diff = targetDay - currentDay;
+                const d = new Date(baseDate);
+                d.setDate(baseDate.getDate() + diff);
+                return formatDate(d);
+            }
+
+            return null;
+        }
+
+        function extractDateTimeLocTitle(text) {
+            let year = BASE_YEAR;
+            let month = 7;
+            let day = 11;
+            let hasDate = false;
+
+            const rocDateRegex = /(?:中華民國|民國)?\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?/;
+            const rocMatch = text.match(rocDateRegex);
+            
+            if (rocMatch) {
+                year = parseInt(rocMatch[1]) + 1911;
+                month = parseInt(rocMatch[2]);
+                day = parseInt(rocMatch[3]);
+                hasDate = true;
+            } else {
+                const rocShortMatch = text.match(/(?<!\d)(115|116)\s*[./]\s*(\d{1,2})\s*[./]\s*(\d{1,2})(?!\d)/);
+                if (rocShortMatch) {
+                    year = parseInt(rocShortMatch[1]) + 1911;
+                    month = parseInt(rocShortMatch[2]);
+                    day = parseInt(rocShortMatch[3]);
+                    hasDate = true;
+                } else {
+                    const cnNoYearMatch = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日?/);
+                    if (cnNoYearMatch) {
+                        month = parseInt(cnNoYearMatch[1]);
+                        day = parseInt(cnNoYearMatch[2]);
+                        hasDate = true;
+                    } else {
+                        const slashMatch = text.match(/(?<!\d)(\d{1,2})\/(\d{1,2})(?!\d)/);
+                        if (slashMatch) {
+                            month = parseInt(slashMatch[1]);
+                            day = parseInt(slashMatch[2]);
+                            hasDate = true;
+                        }
+                    }
+                }
+            }
+
+            const finalDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            let startTime = "09:00";
+            const timeRegex = /(晚上|下午|中午|早上|上午|傍晚)?\s*(\d{1,2})\s*(?::|點|時)\s*(\d{2})?\s*(?:分|整)?/i;
+            const timeMatch = text.match(timeRegex);
+            if (timeMatch) {
+                const period = timeMatch[1];
+                let hour = parseInt(timeMatch[2]);
+                let minute = timeMatch[3] ? String(timeMatch[3]).padStart(2, '0') : "00";
+
+                if ((period === '下午' || period === '晚上' || period === '傍晚') && hour < 12) {
+                    hour += 12;
+                } else if ((period === '上午' || period === '早上') && hour === 12) {
+                    hour = 0;
+                }
+                startTime = `${String(hour).padStart(2, '0')}:${minute}`;
+            } else {
+                if (text.includes("中午12點")) startTime = "12:00";
+                else if (text.includes("下班前") || text.includes("下午")) startTime = "17:00";
+            }
+
+            let endHour = (parseInt(startTime.split(':')[0]) + 1) % 24;
+            let endTime = `${String(endHour).padStart(2, '0')}:${startTime.split(':')[1]}`;
+
+            let location = "";
+            const locRegex = /(?:於|在|地點|開會地點)\s*[:：]?\s*([^\s,，()（）\n!！@#$]+)/;
+            const locMatch = text.match(locRegex);
+            if (locMatch) {
+                location = locMatch[1].trim();
+                location = location.replace(/辦理.*$/, '').trim();
+            }
+
+            let title = "行事曆事項";
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            let possibleTitles = [];
+
+            for (let line of lines) {
+                if (line.includes("@All") || line.includes("@all")) continue;
+                if (line.startsWith("轉知") || line.includes("訊息")) continue;
+                if (line.includes("邀請") || line.includes("簽名") || line.includes("感謝")) continue;
+                if (/https?:\/\/[^\s]+/.test(line)) continue; 
+                if (rocDateRegex.test(line) || /^\d{1,2}\/\d{1,2}/.test(line) || /^\d{3}\.\d{1,2}/.test(line)) continue;
+
+                let cleanLine = line.replace(/\((check mark|okay|star|one|two|bow)\)/gi, '').trim();
+                cleanLine = cleanLine.replace(/^[：::\-\s]+/, '').trim();
+
+                if (cleanLine.length < 2) continue;
+
+                if (cleanLine.startsWith("辦理")) {
+                    let stripped = cleanLine.substring(2).trim();
+                    const quoteMatch = stripped.match(/[「『](.*?)[」』]/);
+                    if (quoteMatch) {
+                        possibleTitles.unshift(quoteMatch[1].trim()); 
+                    } else {
+                        stripped = stripped.replace(/一案(，|。)?.*$/, '').replace(/，請.*$/, '').replace(/請查照。?$/, '').trim();
+                        possibleTitles.unshift(stripped);
+                    }
+                } else if (cleanLine.includes("會議") || cleanLine.includes("餐敘") || cleanLine.includes("報告") || cleanLine.includes("交流")) {
+                    possibleTitles.push(cleanLine);
+                } else {
+                    possibleTitles.push(cleanLine);
+                }
+            }
+
+            if (possibleTitles.length > 0) {
+                title = possibleTitles[0];
+            }
+
+            return {
+                title,
+                startDate: finalDateStr,
+                startTime,
+                endDate: finalDateStr,
+                endTime,
+                location,
+                hasDate
+            };
+        }
+
+        function localParse(text) {
+            const datePattern = /(?:中華民國|民國)?\s*\d{2,3}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|(?<!\d)(115|116)\s*[./]\s*\d{1,2}\s*[./]\s*\d{1,2}(?!\d)|(?<!\d)\d{1,2}\/\d{1,2}(?!\d)/g;
+            const matches = text.match(datePattern) || [];
+
+            if (matches.length <= 1) {
+                return [parseSingleBlock(text, 0)];
+            }
+
+            const chunks = smartMultiEventSplitter(text);
+            return chunks.map((chunk, index) => parseSingleBlock(chunk, index));
+        }
+
+        function parseSingleBlock(chunk, index) {
+            const result = extractDateTimeLocTitle(chunk);
+            const relativeDateStr = parseRelativeDate(chunk);
+
+            let finalDate = result.startDate;
+            if (relativeDateStr) {
+                finalDate = relativeDateStr;
+            }
+
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const urls = chunk.match(urlRegex) || [];
+            let desc = `由系統智慧解析。\n原訊息內容：\n${chunk.trim()}`;
+            if (urls.length > 0) {
+                desc += `\n\n【連結清單】\n` + urls.join('\n');
+            }
+
+            return {
+                id: 'evt_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 5),
+                title: result.title,
+                startDate: finalDate,
+                startTime: result.startTime,
+                endDate: finalDate,
+                endTime: result.endTime,
+                description: desc,
+                location: result.location
+            };
+        }
+
+        function smartMultiEventSplitter(text) {
+            const lines = text.split('\n');
+            let chunks = [];
+            let currentChunk = [];
+
+            for (let line of lines) {
+                const hasNewDate = /(?:中華民國|民國)?\s*\d{2,3}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|(?<!\d)(115|116)\s*[./]\s*\d{1,2}\s*[./]\s*\d{1,2}(?!\d)|(?<!\d)\d{1,2}\/\d{1,2}(?!\d)/.test(line);
+                
+                if (hasNewDate && currentChunk.length > 0) {
+                    chunks.push(currentChunk.join('\n'));
+                    currentChunk = [];
+                }
+                currentChunk.push(line);
+            }
+            if (currentChunk.length > 0) {
+                chunks.push(currentChunk.join('\n'));
+            }
+            return chunks;
+        }
+
+        function localGongwenParse(text) {
+            let title = "公文會議事項";
+            let dateStr = `${BASE_YEAR}-06-23`;
+            let startTime = "16:00";
+            let endTime = "17:00";
+            let location = "";
+            let host = "";
+            let contact = "";
+
+            const titleMatch = text.match(/(?:主[\s\u3000]*旨|開[\s\u3000]*會[\s\u3000]*事[\s\u3000]*由|事[\s\u3000]*由)[\s\u3000]*[:：][\s\u3000]*(.*)/);
+            if (titleMatch) {
+                let rawTitle = titleMatch[1].trim();
+                const quoteMatch = rawTitle.match(/[「『](.*?)[」敬]/); 
+                if (quoteMatch) {
+                    title = quoteMatch[1].trim();
+                } else {
+                    const cleanQuote = rawTitle.match(/[「『](.*?)[」』]/);
+                    if (cleanQuote) {
+                        title = cleanQuote[1].trim();
+                    } else {
+                        title = rawTitle
+                            .replace(/一案(，|。)?.*$/, '')
+                            .replace(/，請.*$/, '')
+                            .replace(/請查照。?$/, '')
+                            .trim();
+                    }
+                }
+            }
+
+            const locMatch = text.match(/(?:開[\s\u3000]*會[\s\u3000]*地[\s\u3000]*點|地[\s\u3000]*點)[\s\u3000]*[:：][\s\u3000]*(.*)/);
+            if (locMatch) {
+                location = locMatch[1].trim();
+            }
+
+            const hostMatch = text.match(/(?:主[\s\u3000]*持[\s\u3000]*人|主[\s\u3000]*席)[\s\u3000]*[:：][\s\u3000]*(.*)/);
+            if (hostMatch) {
+                host = hostMatch[1].trim();
+            }
+
+            const contactMatch = text.match(/(?:聯[\s\u3000]*絡[\s\u3000]*人|承[\s\u3000]*辦[\s\u3000]*人)[\s\u3000]*(?:及電話)?[\s\u3000]*[:：][\s\u3000]*(.*)/);
+            if (contactMatch) {
+                contact = contactMatch[1].trim();
+            }
+
+            const timeFieldMatch = text.match(/(?:開[\s\u3000]*會[\s\u3000]*時[\s\u3000]*間|時[\s\u3000]*間)[\s\u3000]*[:：][\s\u3000]*(.*)/);
+            if (timeFieldMatch) {
+                const fullTimeText = timeFieldMatch[1];
+                
+                const rocDateRegex = /(?:中華民國)?\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/;
+                const rocMatch = fullTimeText.match(rocDateRegex);
+                if (rocMatch) {
+                    const year = parseInt(rocMatch[1]) + 1911; 
+                    const month = String(rocMatch[2]).padStart(2, '0');
+                    const day = String(rocMatch[3]).padStart(2, '0');
+                    dateStr = `${year}-${month}-${day}`;
+                }
+
+                const timeRegex = /(上午|下午|中午|早上|晚上)\s*(\d{1,2})\s*(時|點)\s*(?:(\d{1,2})\s*分|整)?/;
+                const timeMatch = fullTimeText.match(timeRegex);
+                if (timeMatch) {
+                    const period = timeMatch[1];
+                    let hour = parseInt(timeMatch[2]);
+                    let minute = timeMatch[4] ? String(timeMatch[4]).padStart(2, '0') : "00";
+
+                    if ((period === '下午' || period === '晚上') && hour < 12) {
+                        hour += 12;
+                    } else if ((period === '上午' || period === '早上') && hour === 12) {
+                        hour = 0;
+                    }
+                    
+                    const formatHour = String(hour).padStart(2, '0');
+                    startTime = `${formatHour}:${minute}`;
+                    
+                    let endHour = (hour + 1) % 24;
+                    endTime = `${String(endHour).padStart(2, '0')}:${minute}`;
+                }
+            }
+
+            let description = `由公文系統智慧解析。\n`;
+            if (host) description += `• 主持人：${host}\n`;
+            if (contact) description += `• 聯絡窗口：${contact}\n`;
+            description += `\n【原始公文內容擷取】\n${text.trim()}`;
+
+            return [{
+                id: 'evt_gongwen_' + Date.now(),
+                title: title,
+                startDate: dateStr,
+                startTime: startTime,
+                endDate: dateStr,
+                endTime: endTime,
+                description: description,
+                location: location
+            }];
+        }
+
+        async function aiParseImage(base64Data, mimeType, apiKey) {
+            const systemPrompt = `You are a professional Taiwanese executive assistant.
+            Your task is to analyze this screenshot (which could be a LINE message conversation, an official document gongwen, or a note) and extract all calendar events.
+            
+            CRITICAL baseline date: The current year is ${BASE_YEAR} (which equals Taiwan Minguo year 115).
+            - Any mention of "115年" or "115.x.x" or "中華民國115年" refers to the year 2026.
+            - Relativities like "7/8" refer to July 8th, 2026.
+            - "下午4時整" -> 16:00.
+            
+            IMPORTANT: If the text includes quotes (e.g. 「...」), extract the core text INSIDE the quotes as the "title" to keep titles concise.
+            
+            Return ONLY a valid JSON Array with nothing else. No markdown wrappers, strictly matching this structure:
+            [
+              {
+                "title": "Clean Event Title",
+                "startDate": "YYYY-MM-DD",
+                "startTime": "HH:MM",
+                "endDate": "YYYY-MM-DD",
+                "endTime": "HH:MM",
+                "description": "Details, URL links, Hosts, and contact numbers extracted from the image",
+                "location": "Address, room, or venue"
+              }
+            ]`;
+
+            // Super highly-compatible 2026 active model fallback pipeline (Resolves 404)
+            const modelsToTry = [
+                'gemini-3.5-flash',
+                'gemini-3.1-flash-lite',
+                'gemini-2.5-flash',
+                'gemini-2.5-pro'
+            ];
+            let lastError = null;
+
+            for (const model of modelsToTry) {
+                try {
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    
+                    const payload = {
+                        contents: [{
+                            parts: [
+                                { text: systemPrompt },
+                                {
+                                    inlineData: {
+                                        mimeType: mimeType,
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            temperature: 0.1
+                        }
+                    };
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `Model ${model} returned error`);
+                    }
+
+                    const data = await response.json();
+                    const rawText = data.candidates[0].content.parts[0].text;
+                    const cleanedText = rawText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
+                    const parsedArray = JSON.parse(cleanedText);
+                    
+                    return parsedArray.map((evt, idx) => ({
+                        id: 'evt_image_' + Date.now() + '_' + idx,
+                        title: evt.title || "截圖行程事件",
+                        startDate: evt.startDate || `${BASE_YEAR}-07-11`,
+                        startTime: evt.startTime || "09:00",
+                        endDate: evt.endDate || evt.startDate || `${BASE_YEAR}-07-11`,
+                        endTime: evt.endTime || "10:00",
+                        description: evt.description || "從螢幕截圖影像智慧分析提取。",
+                        location: evt.location || ""
+                    }));
+
+                } catch (error) {
+                    console.warn(`視覺解析 ${model} 呼叫失敗，嘗試下一個模型...`, error.message);
+                    lastError = error;
+                }
+            }
+
+            throw new Error(`AI 影像視覺解析失敗。原因：${lastError ? lastError.message : '請檢查您的網路或 API Key'}`);
+        }
+
+        async function processImage() {
+            if (!uploadedImageBase64) {
+                showToast("請先上傳、拖曳或貼上您的對話截圖！", "fa-circle-exclamation text-amber-500");
+                return;
+            }
+
+            const apiKey = localStorage.getItem('GEMINI_API_KEY');
+            if (!apiKey) {
+                showToast("使用 AI 視覺解析需要 Gemini API 金鑰，請點擊右上角設定！", "fa-triangle-exclamation text-amber-500");
+                toggleApiKeyModal();
+                return;
+            }
+
+            const loading = document.getElementById('loadingState');
+            const empty = document.getElementById('emptyState');
+            const list = document.getElementById('eventsList');
+            const bulk = document.getElementById('bulkActions');
+            const loadingText = document.getElementById('loadingText');
+
+            loadingText.innerText = "正在使用 AI 深度讀取與分析您的截圖影像...";
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.classList.add('hidden');
+            bulk.classList.add('hidden');
+
+            try {
+                currentEvents = await aiParseImage(uploadedImageBase64, uploadedImageMimeType, apiKey);
+                renderEvents();
+                showToast(`成功解析出 ${currentEvents.length} 個影像行程！`, "fa-circle-check text-emerald-600");
+                
+                // Smart auto scroll to results section on mobile devices
+                setTimeout(() => {
+                    const resultsSection = document.getElementById('resultsSection');
+                    if (resultsSection) {
+                        resultsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 150);
+
+            } catch (error) {
+                console.error(error);
+                loading.classList.add('hidden');
+                empty.classList.remove('hidden');
+                showToast("影像分析失敗：" + error.message, "fa-circle-xmark text-red-500");
+            }
+        }
+
+        async function aiParse(text, apiKey, sourceMode) {
+            const documentSpecificPrompt = sourceMode === 'gongwen' 
+                ? `You are specifically parsing a formal Taiwanese Official Document (公文). Please extract elements: title (from '主旨' or '開會事由'. If the title contains quote brackets like 「...」 or 『...』, ALWAYS extract and use only the inner core text inside those brackets as the "title" to avoid long, redundant legal suffixes), startDate, startTime, endDate, endTime, location (開會地點), and contact information as part of description.` 
+                : `You are parsing an informal LINE message, possibly containing multi-line event reminders.`;
+
+            const systemPrompt = `You are an expert Taiwanese system assistant designed to parse texts and output structured calendar events.
+            CRITICAL ENVIRONMENT INFO: The CURRENT baseline year is ${BASE_YEAR} (which equals Taiwan Minguo year 115).
+            Thus, any mention of "115年" or "115.x.x" or "中華民國115年" refers to the year 2026.
+            Also, relative times or simple formats like "7/8" refer to ${BASE_YEAR}-07-08.
+            
+            ${documentSpecificPrompt}
+
+            Convert any localized Taiwanese phrases like "下午4時整" to standard 24H times (e.g. 16:00).
+            Extract addresses and put them directly in "location" property.
+
+            Return ONLY a valid JSON Array with nothing else. No markdown wrappers except valid json formatting, strictly matching this structure:
+            [
+              {
+                "title": "Event Title",
+                "startDate": "YYYY-MM-DD",
+                "startTime": "HH:MM",
+                "endDate": "YYYY-MM-DD",
+                "endTime": "HH:MM",
+                "description": "Details, Host, and contact numbers",
+                "location": "Address or venue"
+              }
+            ]`;
+
+            // Super highly-compatible 2026 active model fallback pipeline (Resolves 404)
+            const modelsToTry = [
+                'gemini-3.5-flash',
+                'gemini-3.1-flash-lite',
+                'gemini-2.5-flash',
+                'gemini-2.0-flash'
+            ];
+            let lastError = null;
+
+            for (const model of modelsToTry) {
+                try {
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{
+                            parts: [{
+                                text: `${systemPrompt}\n\nText to parse:\n${text}`
+                            }]
+                        }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            temperature: 0.1
+                        }
+                    };
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `Model ${model} returned error`);
+                    }
+
+                    const data = await response.json();
+                    const rawText = data.candidates[0].content.parts[0].text;
+                    const cleanedText = rawText.trim().replace(/^```json/, '').replace(/```$/, '').trim();
+                    const parsedArray = JSON.parse(cleanedText);
+                    
+                    return parsedArray.map((evt, idx) => ({
+                        id: 'evt_' + Date.now() + '_' + idx,
+                        title: evt.title || "公文行程活動",
+                        startDate: evt.startDate || `${BASE_YEAR}-07-11`,
+                        startTime: evt.startTime || "09:00",
+                        endDate: evt.endDate || evt.startDate || `${BASE_YEAR}-07-11`,
+                        endTime: evt.endTime || "10:00",
+                        description: evt.description || "",
+                        location: evt.location || ""
+                    }));
+
+                } catch (error) {
+                    console.warn(`使用 ${model} 呼叫失敗，嘗試下一個備用模型...`, error.message);
+                    lastError = error;
+                }
+            }
+
+            throw new Error(`AI 解析失敗。所有支援的 Gemini 模型皆無法連線：${lastError ? lastError.message : '請檢查網路連線或 API 金鑰'}`);
+        }
+
+        async function processMessage(source) {
+            const targetTextAreaId = source === 'line' ? 'lineMessage' : 'gongwenMessage';
+            const messageText = document.getElementById(targetTextAreaId).value.trim();
+            
+            if (!messageText) {
+                showToast(source === 'line' ? "請輸入或貼上 LINE 訊息" : "請輸入或貼上公文內容", "fa-triangle-exclamation text-amber-500");
+                return;
+            }
+
+            const loading = document.getElementById('loadingState');
+            const empty = document.getElementById('emptyState');
+            const list = document.getElementById('eventsList');
+            const bulk = document.getElementById('bulkActions');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.classList.add('hidden');
+            bulk.classList.add('hidden');
+
+            try {
+                if (parseMode === 'ai') {
+                    const apiKey = localStorage.getItem('GEMINI_API_KEY');
+                    if (!apiKey) {
+                        throw new Error("請先點選右上角『Gemini API 金鑰』按鈕填寫金鑰，或是切換至『本地』解析模式。");
+                    }
+                    currentEvents = await aiParse(messageText, apiKey, source);
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 500)); 
+                    if (source === 'line') {
+                        currentEvents = localParse(messageText);
+                    } else {
+                        currentEvents = localGongwenParse(messageText);
+                    }
+                }
+
+                renderEvents();
+                showToast(`成功解析出 ${currentEvents.length} 個行程！`, "fa-circle-check text-emerald-600");
+                
+                // Smart auto scroll to results section on mobile devices
+                setTimeout(() => {
+                    const resultsSection = document.getElementById('resultsSection');
+                    if (resultsSection) {
+                        resultsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 150);
+
+            } catch (error) {
+                console.error(error);
+                loading.classList.add('hidden');
+                empty.classList.remove('hidden');
+                showToast("解析失敗：" + error.message, "fa-circle-xmark text-red-500");
+            }
+        }
+
+        function refreshCardBadge(id, dateString) {
+            const badgeMonth = document.getElementById(`badge-month-${id}`);
+            const badgeDay = document.getElementById(`badge-day-${id}`);
+            const badgeWeekday = document.getElementById(`badge-weekday-${id}`);
+            if (!badgeMonth || !badgeDay || !badgeWeekday) return;
+
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                badgeMonth.innerText = "??月";
+                badgeDay.innerText = "??";
+                badgeWeekday.innerText = "無法解析";
+                return;
+            }
+
+            const daysOfWeek = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+            badgeMonth.innerText = `${date.getMonth() + 1}月`;
+            badgeDay.innerText = date.getDate();
+            badgeWeekday.innerText = daysOfWeek[date.getDay()];
+        }
+
+        function validateEventTimes(id, event) {
+            const startStr = `${event.startDate}T${event.startTime}`;
+            const endStr = `${event.endDate}T${event.endTime}`;
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+            
+            const startInput = document.getElementById(`start-date-${id}`);
+            const endInput = document.getElementById(`end-date-${id}`);
+
+            if (startInput && endInput) {
+                if (end < start) {
+                    endInput.classList.add('border-red-500', 'bg-red-50', 'ring-2', 'ring-red-200');
+                    return false;
+                } else {
+                    endInput.classList.remove('border-red-500', 'bg-red-50', 'ring-2', 'ring-red-200');
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        function renderEvents() {
+            const loading = document.getElementById('loadingState');
+            const empty = document.getElementById('emptyState');
+            const list = document.getElementById('eventsList');
+            const bulk = document.getElementById('bulkActions');
+
+            loading.classList.add('hidden');
+            localStorage.setItem('L2C_SAVED_EVENTS', JSON.stringify(currentEvents));
+
+            if (currentEvents.length === 0) {
+                empty.classList.remove('hidden');
+                list.classList.add('hidden');
+                bulk.classList.add('hidden');
+                return;
+            }
+
+            empty.className = "hidden";
+            list.classList.remove('hidden');
+            bulk.classList.remove('hidden');
+
+            list.innerHTML = '';
+            
+            const dateCount = {};
+            currentEvents.forEach(e => {
+                if (e.startDate) {
+                    dateCount[e.startDate] = (dateCount[e.startDate] || 0) + 1;
+                }
+            });
+
+            currentEvents.forEach((evt) => {
+                const isConflict = dateCount[evt.startDate] > 1;
+                
+                const dateObj = new Date(evt.startDate);
+                let monthStr = "??月";
+                let dayStr = "??";
+                let weekdayStr = "";
+                if (!isNaN(dateObj.getTime())) {
+                    const daysOfWeek = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+                    monthStr = `${dateObj.getMonth() + 1}月`;
+                    dayStr = dateObj.getDate();
+                    weekdayStr = daysOfWeek[dateObj.getDay()];
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-md p-4 sm:p-5 rounded-2xl transition-all duration-300 flex flex-col md:flex-row gap-4 sm:gap-5 relative group";
+                card.innerHTML = `
+                    <!-- Calendar Badge Widget -->
+                    <div class="flex flex-row md:flex-col items-center justify-between md:justify-center bg-gradient-to-br from-emerald-50 to-slate-50 text-emerald-800 border border-emerald-100 rounded-xl p-3 md:p-3 w-full md:w-20 h-auto md:h-24 shrink-0 shadow-sm gap-2 md:gap-1">
+                        <div class="flex md:flex-col items-center gap-2 md:gap-1">
+                            <span class="text-xs font-extrabold tracking-wider text-emerald-600 uppercase" id="badge-month-${evt.id}">${monthStr}</span>
+                            <span class="text-xl md:text-3xl font-black text-slate-800 leading-none" id="badge-day-${evt.id}">${dayStr}</span>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-500 bg-emerald-100/60 px-2.5 py-0.5 rounded md:mt-1" id="badge-weekday-${evt.id}">${weekdayStr}</span>
+                    </div>
+
+                    <!-- Editable Details Area -->
+                    <div class="flex-grow flex flex-col gap-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <!-- Title Edit -->
+                            <input type="text" value="${escapeHtml(evt.title)}" 
+                                onchange="updateEventField('${evt.id}', 'title', this.value)"
+                                placeholder="未命名行程"
+                                class="flex-grow bg-transparent border-b border-transparent hover:border-slate-200 focus:border-emerald-500 py-1 font-bold text-slate-800 text-sm sm:text-base focus:outline-none transition-all" />
+                            
+                            ${isConflict ? `
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="此日期已排入其他行程">
+                                    <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-500"></i> 同日行程重複
+                                </span>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Start Date/Time -->
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">開始時間</span>
+                                <div class="flex gap-1.5">
+                                    <input type="date" value="${evt.startDate}" id="start-date-${evt.id}"
+                                        onchange="updateEventField('${evt.id}', 'startDate', this.value)"
+                                        class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 w-full" />
+                                    <input type="time" value="${evt.startTime}" 
+                                        onchange="updateEventField('${evt.id}', 'startTime', this.value)"
+                                        class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 w-full" />
+                                </div>
+                            </div>
+                            <!-- End Date/Time -->
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">結束時間</span>
+                                <div class="flex gap-1.5">
+                                    <input type="date" value="${evt.endDate}" id="end-date-${evt.id}"
+                                        onchange="updateEventField('${evt.id}', 'endDate', this.value)"
+                                        class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 w-full" />
+                                    <input type="time" value="${evt.endTime}" 
+                                        onchange="updateEventField('${evt.id}', 'endTime', this.value)"
+                                        class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500 w-full" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location Input -->
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">開會地點 / 會議連結</span>
+                            <input type="text" value="${escapeHtml(evt.location || '')}" 
+                                placeholder="無設定地點 (選填)"
+                                onchange="updateEventField('${evt.id}', 'location', this.value)"
+                                class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-emerald-500 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none transition-all placeholder:text-slate-400" />
+                        </div>
+
+                        <!-- Description -->
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">說明及詳細內容</span>
+                            <textarea rows="3" 
+                                onchange="updateEventField('${evt.id}', 'description', this.value)"
+                                class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-emerald-500 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none transition-all placeholder:text-slate-400">${escapeHtml(evt.description)}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Card Actions -->
+                    <div class="flex flex-row md:flex-col gap-2 w-full md:w-auto shrink-0 justify-end pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 flex-wrap">
+                        <button onclick="addToGoogleCalendar('${evt.id}')" 
+                            class="flex-1 md:flex-none bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95">
+                            <i class="fa-brands fa-google text-xs"></i> <span class="inline md:inline">匯入 Google</span>
+                        </button>
+                        <button onclick="exportSingleICS('${evt.id}')" 
+                            class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border border-slate-200 text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95">
+                            <i class="fa-solid fa-file-arrow-down text-xs"></i> 下載 ICS
+                        </button>
+                        <button onclick="copyEventText('${evt.id}')" 
+                            class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border border-slate-200 text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95" title="複製純文字內容">
+                            <i class="fa-regular fa-copy text-xs"></i> 複製文字
+                        </button>
+                        <button onclick="deleteEvent('${evt.id}')" 
+                            class="text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition-all text-xs flex items-center justify-center gap-1 md:mt-2 active:scale-95" title="刪除此卡片">
+                            <i class="fa-solid fa-trash-can"></i> <span class="md:hidden ml-1">刪除項目</span>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function updateEventField(id, field, value) {
+            const eventIndex = currentEvents.findIndex(e => e.id === id);
+            if (eventIndex !== -1) {
+                currentEvents[eventIndex][field] = value;
+                
+                if (field === 'startDate') {
+                    currentEvents[eventIndex].endDate = value;
+                    renderEvents(); 
+                }
+
+                if (field === 'startDate') {
+                    refreshCardBadge(id, value);
+                }
+
+                validateEventTimes(id, currentEvents[eventIndex]);
+            }
+        }
+
+        function deleteEvent(id) {
+            const eventToDelete = currentEvents.find(e => e.id === id);
+            if (eventToDelete) {
+                deletedEventsStack.push(eventToDelete);
+                currentEvents = currentEvents.filter(e => e.id !== id);
+                renderEvents();
+                showToast("已刪除該行程卡片。 按此可復原！", "fa-trash text-amber-500", true);
+            }
+        }
+
+        function clearAllEvents() {
+            if (currentEvents.length === 0) return;
+            deletedEventsStack = [...deletedEventsStack, ...currentEvents];
+            currentEvents = [];
+            renderEvents();
+            showToast("已清空所有行程！點擊可復原！", "fa-trash-can text-amber-500", true);
+        }
+
+        function undoDelete() {
+            if (deletedEventsStack.length > 0) {
+                const restored = deletedEventsStack.pop();
+                currentEvents.push(restored);
+                
+                while (deletedEventsStack.length > 0 && deletedEventsStack[deletedEventsStack.length - 1].id === 'evt_fallback') {
+                    currentEvents.push(deletedEventsStack.pop());
+                }
+
+                renderEvents();
+                showToast("已還原已刪除的行程卡片！", "fa-circle-check text-emerald-600");
+            }
+        }
+
+        function addManualEvent() {
+            const newId = 'evt_' + Date.now();
+            currentEvents.unshift({
+                id: newId,
+                title: "全新自訂會議",
+                startDate: `${BASE_YEAR}-07-11`,
+                startTime: "09:00",
+                endDate: `${BASE_YEAR}-07-11`,
+                endTime: "10:00",
+                description: "點擊此處輸入詳細說明...",
+                location: ""
+            });
+            renderEvents();
+            showToast("已新增一個空白自訂行程", "fa-plus text-emerald-600");
+            
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('#eventsList input[type="text"]');
+                if (inputs.length > 0) {
+                    inputs[0].focus();
+                    inputs[0].select();
+                }
+            }, 100);
+        }
+
+        function copyEventText(id) {
+            const evt = currentEvents.find(e => e.id === id);
+            if (!evt) return;
+
+            let textToCopy = `【${evt.title}】\n時間：${evt.startDate} ${evt.startTime} ~ ${evt.endDate} ${evt.endTime}\n`;
+            if (evt.location) {
+                textToCopy += `地點：${evt.location}\n`;
+            }
+            textToCopy += `說明：${evt.description}`;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("已成功複製行程資訊至剪貼簿！", "fa-clipboard text-emerald-600");
+            } catch (err) {
+                showToast("無法複製行程資訊，請手動複製", "fa-triangle-exclamation text-amber-500");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function addToGoogleCalendar(id) {
+            const evt = currentEvents.find(e => e.id === id);
+            if (!evt) return;
+
+            const cleanStartDate = evt.startDate.replace(/-/g, '');
+            const cleanEndDate = evt.endDate.replace(/-/g, '');
+            const cleanStartTime = evt.startTime.replace(/:/g, '') + '00';
+            const cleanEndTime = evt.endTime.replace(/:/g, '') + '00';
+
+            const startUTC = `${cleanStartDate}T${cleanStartTime}`;
+            const endUTC = `${cleanEndDate}T${cleanEndTime}`;
+
+            const url = new URL("https://calendar.google.com/calendar/render");
+            url.searchParams.set("action", "TEMPLATE");
+            url.searchParams.set("text", evt.title);
+            url.searchParams.set("dates", `${startUTC}/${endUTC}`);
+            url.searchParams.set("details", evt.description);
+            if (evt.location) {
+                url.searchParams.set("location", evt.location);
+            }
+
+            window.open(url.toString(), '_blank');
+        }
+
+        function buildIcsContent(eventsToExport) {
+            let ics = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Line2Cal//Taiwan Calendar Tool//EN',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH'
+            ];
+
+            eventsToExport.forEach(evt => {
+                const cleanStartD = evt.startDate.replace(/-/g, '');
+                const cleanStartT = evt.startTime.replace(/:/g, '') + '00';
+                const cleanEndD = evt.endDate.replace(/-/g, '');
+                const cleanEndT = evt.endTime.replace(/:/g, '') + '00';
+
+                ics.push('BEGIN:VEVENT');
+                ics.push(`UID:${evt.id}@line2cal.master`);
+                ics.push(`DTSTAMP:${cleanStartD}T${cleanStartT}`);
+                ics.push(`DTSTART:${cleanStartD}T${cleanStartT}`);
+                ics.push(`DTEND:${cleanEndD}T${cleanEndT}`);
+                ics.push(`SUMMARY:${evt.title.replace(/,/g, '\\,')}`);
+                ics.push(`DESCRIPTION:${evt.description.replace(/\n/g, '\\n').replace(/,/g, '\\,')}`);
+                if (evt.location) {
+                    ics.push(`LOCATION:${evt.location.replace(/,/g, '\\,')}`);
+                }
+                ics.push('END:VEVENT');
+            });
+
+            ics.push('END:VCALENDAR');
+            return ics.join('\r\n');
+        }
+
+        function downloadBlob(content, filename) {
+            const blob = new Blob([content], { type: 'text/calendar;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportSingleICS(id) {
+            const evt = currentEvents.find(e => e.id === id);
+            if (!evt) return;
+
+            const icsData = buildIcsContent([evt]);
+            const safeFileName = evt.title.replace(/[/\\?%*:|"<>\s]/g, '_') + '.ics';
+            downloadBlob(icsData, safeFileName);
+            showToast("成功下載單一 ICS 檔案！", "fa-file-circle-check text-emerald-600");
+        }
+
+        function exportAllICS() {
+            if (currentEvents.length === 0) return;
+            const icsData = buildIcsContent(currentEvents);
+            downloadBlob(icsData, 'line2cal_all_events.ics');
+            showToast("成功下載批次 ICS 檔案！", "fa-file-circle-check text-emerald-600");
+        }
+
+        function toggleApiKeyModal() {
+            const modal = document.getElementById('apiKeyModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function saveApiKey() {
+            const keyVal = document.getElementById('apiKeyInput').value.trim();
+            if (!keyVal) {
+                showToast("請輸入金鑰之後再進行儲存", "fa-circle-exclamation text-amber-500");
+                return;
+            }
+            localStorage.setItem('GEMINI_API_KEY', keyVal);
+            toggleApiKeyModal();
+            showToast("Gemini API 金鑰已安全儲存！", "fa-circle-check text-emerald-600");
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('GEMINI_API_KEY');
+            document.getElementById('apiKeyInput').value = '';
+            toggleApiKeyModal();
+            showToast("已清除儲存的金鑰", "fa-trash text-emerald-600");
+            if (parseMode === 'ai') {
+                setMode('local');
+            }
+        }
+
+        function showToast(text, iconClass, allowUndo = false) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastText.innerHTML = text;
+            if (allowUndo) {
+                toastText.innerHTML += ` <button onclick="undoDelete()" class="underline font-black text-emerald-600 hover:text-emerald-700 ml-2">復原</button>`;
+            }
+            toastIcon.className = `fa-solid ${iconClass}`;
+
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 5500); 
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
