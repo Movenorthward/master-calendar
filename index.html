@@ -243,8 +243,8 @@
                         <button onclick="addManualEvent()" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95">
                             <i class="fa-solid fa-plus text-emerald-600"></i> 手動新增
                         </button>
-                        <button onclick="exportAllICS()" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95">
-                            <i class="fa-solid fa-file-arrow-down text-emerald-600"></i> 批次 ICS
+                        <button onclick="exportAllICS()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3.5 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-sm border border-emerald-500 animate-bounce">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> 一鍵匯入全部行程
                         </button>
                         <button onclick="clearAllEvents()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-3 rounded-lg flex items-center gap-1.5 transition-all shrink-0 active:scale-95" title="清空全部行程">
                             <i class="fa-solid fa-trash-can"></i> 清除全部
@@ -308,7 +308,7 @@
             
             <div class="space-y-4">
                 <p class="text-xs text-slate-500 leading-relaxed">
-                    本系統支援使用 <strong class="text-emerald-600">Gemini 3.5 / 2.5 Flash</strong> 系列視覺多模態模型。金鑰僅儲存於您個人的本地瀏覽器 (LocalStorage)，安全無虞。
+                    本系統支援使用 <strong class="text-emerald-600">Gemini 2.5/3.5 Flash</strong> 系列視覺多模態模型。金鑰僅儲存於您個人的本地瀏覽器 (LocalStorage)，安全無虞。
                 </p>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">API 金鑰 (API Key)</label>
@@ -323,6 +323,56 @@
                         清除
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Batch Import Explainer Modal -->
+    <div id="batchImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 m-4 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
+            <button onclick="toggleBatchModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 bg-emerald-50 border border-emerald-100 rounded-lg">
+                    <i class="fa-solid fa-cloud-arrow-down text-emerald-600 text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-slate-800 text-base">一鍵批次匯入教學</h3>
+                    <p class="text-xs text-slate-500">已自動為您產生整合行事曆檔案</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4 text-xs text-slate-600 leading-relaxed">
+                <p class="bg-slate-50 p-3 rounded-xl border border-slate-100 font-medium">
+                    您剛剛下載的 <strong class="text-emerald-600">master_calendar_events.ics</strong> 包含了本次解析出的所有行事曆。請依照您的裝置選擇以下方式一鍵匯入：
+                </p>
+                <div class="space-y-3">
+                    <div class="flex gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center shrink-0">1</span>
+                        <div>
+                            <strong class="text-slate-800">Google 日曆 (網頁版)</strong>
+                            <p class="text-slate-500 mt-0.5">點擊右上角「設定齒輪」→「匯入並匯出」，選取該檔案並匯入，所有連假、開學日便會立刻出現在您的所有同步裝置上！</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center shrink-0">2</span>
+                        <div>
+                            <strong class="text-slate-800">iPhone / Mac (行事曆)</strong>
+                            <p class="text-slate-500 mt-0.5">直接雙擊開啟下載的檔案，系統便會彈出視窗詢問是否「全部加入行事曆」！</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center shrink-0">3</span>
+                        <div>
+                            <strong class="text-slate-800">Windows / Outlook</strong>
+                            <p class="text-slate-500 mt-0.5">雙擊點開，Outlook 便會自動開啟並將此批次行程同步導入！</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="toggleBatchModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl transition-all text-center">
+                    我知道了
+                </button>
             </div>
         </div>
     </div>
@@ -547,7 +597,11 @@
             document.getElementById('imagePreviewContainer').classList.add('hidden');
         }
 
-        // Formats Date objects consistently to YYYY-MM-DD
+        function toggleBatchModal() {
+            const modal = document.getElementById('batchImportModal');
+            modal.classList.toggle('hidden');
+        }
+
         function formatDate(dateObj) {
             const y = dateObj.getFullYear();
             const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -555,224 +609,143 @@
             return `${y}-${m}-${d}`;
         }
 
-        function parseRelativeDate(text) {
-            const baseDate = new Date('2026-07-11'); // Simulation reference date
-            const cleanText = text.trim();
-
-            if (cleanText.includes("今天")) {
-                return formatDate(baseDate);
-            }
-            if (cleanText.includes("明天")) {
-                const d = new Date(baseDate);
-                d.setDate(baseDate.getDate() + 1);
-                return formatDate(d);
-            }
-            if (cleanText.includes("後天")) {
-                const d = new Date(baseDate);
-                d.setDate(baseDate.getDate() + 2);
-                return formatDate(d);
+        function parseDateString(str) {
+            // Match standard full ROC Date: 115年8月31日(星期一)
+            const rocRegex = /(?:中華民國|民國)?\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?\s*(?:（[^）\n]+）|\([^)\n]+\))?/i;
+            const matchRoc = str.match(rocRegex);
+            if (matchRoc) {
+                return {
+                    year: parseInt(matchRoc[1]) + 1911,
+                    month: parseInt(matchRoc[2]),
+                    day: parseInt(matchRoc[3]),
+                    matchedText: matchRoc[0],
+                    index: matchRoc.index
+                };
             }
 
-            const weekdays = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "日": 0, "天": 0 };
-            const nextWeekMatch = cleanText.match(/下週([一二三四五六日天])/);
-            if (nextWeekMatch) {
-                const targetDay = weekdays[nextWeekMatch[1]];
-                const currentDay = baseDate.getDay(); 
-                let daysToAdd = (7 - currentDay) + targetDay;
-                if (daysToAdd <= 0) daysToAdd += 7;
-                const d = new Date(baseDate);
-                d.setDate(baseDate.getDate() + daysToAdd);
-                return formatDate(d);
+            // Match Dot/Slash formats: 115.8.31
+            const shortRegex = /(?<!\d)(115|116|117)\s*[./]\s*(\d{1,2})\s*[./]\s*(\d{1,2})(?!\d)\s*(?:（[^）\n]+）|\([^)\n]+\))?/i;
+            const matchShort = str.match(shortRegex);
+            if (matchShort) {
+                return {
+                    year: parseInt(matchShort[1]) + 1911,
+                    month: parseInt(matchShort[2]),
+                    day: parseInt(matchShort[3]),
+                    matchedText: matchShort[0],
+                    index: matchShort.index
+                };
             }
 
-            const thisWeekMatch = cleanText.match(/這週([一二三四五六日天])|本週([一二三四五六日天])/);
-            if (thisWeekMatch) {
-                const targetDay = weekdays[thisWeekMatch[1] || thisWeekMatch[2]];
-                const currentDay = baseDate.getDay(); 
-                const diff = targetDay - currentDay;
-                const d = new Date(baseDate);
-                d.setDate(baseDate.getDate() + diff);
-                return formatDate(d);
+            // Fallback West Year format
+            const westRegex = /(?<!\d)(2026|2027|2028)\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{1,2})(?!\d)\s*(?:（[^）\n]+）|\([^)\n]+\))?/i;
+            const matchWest = str.match(westRegex);
+            if (matchWest) {
+                return {
+                    year: parseInt(matchWest[1]),
+                    month: parseInt(matchWest[2]),
+                    day: parseInt(matchWest[3]),
+                    matchedText: matchWest[0],
+                    index: matchWest.index
+                };
+            }
+
+            // No year fallback format
+            const shortNoYearRegex = /(?<!\d)(\d{1,2})\s*[月/]\s*(\d{1,2})\s*日?\s*(?:（[^）\n]+）|\([^)\n]+\))?/i;
+            const matchNoYear = str.match(shortNoYearRegex);
+            if (matchNoYear) {
+                return {
+                    year: BASE_YEAR,
+                    month: parseInt(matchNoYear[1]),
+                    day: parseInt(matchNoYear[2]),
+                    matchedText: matchNoYear[0],
+                    index: matchNoYear.index
+                };
             }
 
             return null;
         }
 
-        function extractDateTimeLocTitle(text) {
-            let year = BASE_YEAR;
-            let month = 7;
-            let day = 11;
-            let hasDate = false;
-
-            const rocDateRegex = /(?:中華民國|民國)?\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?/;
-            const rocMatch = text.match(rocDateRegex);
-            
-            if (rocMatch) {
-                year = parseInt(rocMatch[1]) + 1911;
-                month = parseInt(rocMatch[2]);
-                day = parseInt(rocMatch[3]);
-                hasDate = true;
-            } else {
-                const rocShortMatch = text.match(/(?<!\d)(115|116)\s*[./]\s*(\d{1,2})\s*[./]\s*(\d{1,2})(?!\d)/);
-                if (rocShortMatch) {
-                    year = parseInt(rocShortMatch[1]) + 1911;
-                    month = parseInt(rocShortMatch[2]);
-                    day = parseInt(rocShortMatch[3]);
-                    hasDate = true;
-                } else {
-                    const cnNoYearMatch = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日?/);
-                    if (cnNoYearMatch) {
-                        month = parseInt(cnNoYearMatch[1]);
-                        day = parseInt(cnNoYearMatch[2]);
-                        hasDate = true;
-                    } else {
-                        const slashMatch = text.match(/(?<!\d)(\d{1,2})\/(\d{1,2})(?!\d)/);
-                        if (slashMatch) {
-                            month = parseInt(slashMatch[1]);
-                            day = parseInt(slashMatch[2]);
-                            hasDate = true;
-                        }
-                    }
-                }
-            }
-
-            const finalDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-            let startTime = "09:00";
-            const timeRegex = /(晚上|下午|中午|早上|上午|傍晚)?\s*(\d{1,2})\s*(?::|點|時)\s*(\d{2})?\s*(?:分|整)?/i;
-            const timeMatch = text.match(timeRegex);
-            if (timeMatch) {
-                const period = timeMatch[1];
-                let hour = parseInt(timeMatch[2]);
-                let minute = timeMatch[3] ? String(timeMatch[3]).padStart(2, '0') : "00";
-
-                if ((period === '下午' || period === '晚上' || period === '傍晚') && hour < 12) {
-                    hour += 12;
-                } else if ((period === '上午' || period === '早上') && hour === 12) {
-                    hour = 0;
-                }
-                startTime = `${String(hour).padStart(2, '0')}:${minute}`;
-            } else {
-                if (text.includes("中午12點")) startTime = "12:00";
-                else if (text.includes("下班前") || text.includes("下午")) startTime = "17:00";
-            }
-
-            let endHour = (parseInt(startTime.split(':')[0]) + 1) % 24;
-            let endTime = `${String(endHour).padStart(2, '0')}:${startTime.split(':')[1]}`;
-
-            let location = "";
-            const locRegex = /(?:於|在|地點|開會地點)\s*[:：]?\s*([^\s,，()（）\n!！@#$]+)/;
-            const locMatch = text.match(locRegex);
-            if (locMatch) {
-                location = locMatch[1].trim();
-                location = location.replace(/辦理.*$/, '').trim();
-            }
-
-            let title = "行事曆事項";
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            let possibleTitles = [];
-
-            for (let line of lines) {
-                if (line.includes("@All") || line.includes("@all")) continue;
-                if (line.startsWith("轉知") || line.includes("訊息")) continue;
-                if (line.includes("邀請") || line.includes("簽名") || line.includes("感謝")) continue;
-                if (/https?:\/\/[^\s]+/.test(line)) continue; 
-                if (rocDateRegex.test(line) || /^\d{1,2}\/\d{1,2}/.test(line) || /^\d{3}\.\d{1,2}/.test(line)) continue;
-
-                let cleanLine = line.replace(/\((check mark|okay|star|one|two|bow)\)/gi, '').trim();
-                cleanLine = cleanLine.replace(/^[：::\-\s]+/, '').trim();
-
-                if (cleanLine.length < 2) continue;
-
-                if (cleanLine.startsWith("辦理")) {
-                    let stripped = cleanLine.substring(2).trim();
-                    const quoteMatch = stripped.match(/[「『](.*?)[」』]/);
-                    if (quoteMatch) {
-                        possibleTitles.unshift(quoteMatch[1].trim()); 
-                    } else {
-                        stripped = stripped.replace(/一案(，|。)?.*$/, '').replace(/，請.*$/, '').replace(/請查照。?$/, '').trim();
-                        possibleTitles.unshift(stripped);
-                    }
-                } else if (cleanLine.includes("會議") || cleanLine.includes("餐敘") || cleanLine.includes("報告") || cleanLine.includes("交流")) {
-                    possibleTitles.push(cleanLine);
-                } else {
-                    possibleTitles.push(cleanLine);
-                }
-            }
-
-            if (possibleTitles.length > 0) {
-                title = possibleTitles[0];
-            }
-
-            return {
-                title,
-                startDate: finalDateStr,
-                startTime,
-                endDate: finalDateStr,
-                endTime,
-                location,
-                hasDate
-            };
-        }
-
+        /**
+         * List-by-list Semantic Parser:
+         * Parses structured list inputs and splits dates from actual event subject.
+         * Accurately supports ranges (Date1 至 Date2) and processes all dates globally.
+         */
         function localParse(text) {
-            const datePattern = /(?:中華民國|民國)?\s*\d{2,3}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|(?<!\d)(115|116)\s*[./]\s*\d{1,2}\s*[./]\s*\d{1,2}(?!\d)|(?<!\d)\d{1,2}\/\d{1,2}(?!\d)/g;
-            const matches = text.match(datePattern) || [];
-
-            if (matches.length <= 1) {
-                return [parseSingleBlock(text, 0)];
-            }
-
-            const chunks = smartMultiEventSplitter(text);
-            return chunks.map((chunk, index) => parseSingleBlock(chunk, index));
-        }
-
-        function parseSingleBlock(chunk, index) {
-            const result = extractDateTimeLocTitle(chunk);
-            const relativeDateStr = parseRelativeDate(chunk);
-
-            let finalDate = result.startDate;
-            if (relativeDateStr) {
-                finalDate = relativeDateStr;
-            }
-
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            const urls = chunk.match(urlRegex) || [];
-            let desc = `由系統智慧解析。\n原訊息內容：\n${chunk.trim()}`;
-            if (urls.length > 0) {
-                desc += `\n\n【連結清單】\n` + urls.join('\n');
-            }
-
-            return {
-                id: 'evt_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 5),
-                title: result.title,
-                startDate: finalDate,
-                startTime: result.startTime,
-                endDate: finalDate,
-                endTime: result.endTime,
-                description: desc,
-                location: result.location
-            };
-        }
-
-        function smartMultiEventSplitter(text) {
+            const events = [];
             const lines = text.split('\n');
-            let chunks = [];
-            let currentChunk = [];
 
-            for (let line of lines) {
-                const hasNewDate = /(?:中華民國|民國)?\s*\d{2,3}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|(?<!\d)(115|116)\s*[./]\s*\d{1,2}\s*[./]\s*\d{1,2}(?!\d)|(?<!\d)\d{1,2}\/\d{1,2}(?!\d)/.test(line);
-                
-                if (hasNewDate && currentChunk.length > 0) {
-                    chunks.push(currentChunk.join('\n'));
-                    currentChunk = [];
+            lines.forEach((line, idx) => {
+                const cleanLine = line.trim();
+                if (cleanLine.length < 3) return;
+
+                // 1. Try to extract Date1
+                const date1 = parseDateString(cleanLine);
+                if (!date1) return; // Skip lines without any date references
+
+                // Determine remaining text block after Date1
+                let remainingText = cleanLine.substring(date1.index + date1.matchedText.length).trim();
+
+                let startDate = `${date1.year}-${String(date1.month).padStart(2, '0')}-${String(date1.day).padStart(2, '0')}`;
+                let endDate = startDate;
+                let title = remainingText;
+
+                // 2. Check for date range separators: "至", "到", "~", "-" followed by Date2
+                const rangeMatch = remainingText.match(/^\s*(?:至|到|~|-)\s*/i);
+                if (rangeMatch) {
+                    const textAfterSeparator = remainingText.substring(rangeMatch[0].length).trim();
+                    const date2 = parseDateString(textAfterSeparator);
+                    if (date2) {
+                        endDate = `${date2.year}-${String(date2.month).padStart(2, '0')}-${String(date2.day).padStart(2, '0')}`;
+                        title = textAfterSeparator.substring(date2.index + date2.matchedText.length).trim();
+                    }
                 }
-                currentChunk.push(line);
+
+                // 3. Post-processing: clean symbols, brackets and punctuation from Title
+                title = title.replace(/\((check mark|okay|star|one|two|bow)\)/gi, '').trim();
+                title = title.replace(/^[：::\-\s*●•，,。]+/g, '').trim(); 
+                
+                // NEW: Smart filtering for school calendars and admin texts
+                title = title.replace(/[，,]\s*共計?\d+[天日].*?$/, '').trim(); // 移除「，共計21日」等字眼
+                
+                title = title.replace(/[。；;]+$/, '').trim(); // Strip trailing period/semicolon
+
+                if (!title) {
+                    title = "行事曆事項";
+                }
+
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const urls = line.match(urlRegex) || [];
+                let desc = `由系統自動智慧拆分日程。\n原訊息：${line.trim()}`;
+                if (urls.length > 0) {
+                    desc += `\n\n【連結清單】\n` + urls.join('\n');
+                }
+
+                events.push({
+                    id: 'evt_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 5),
+                    title: title,
+                    startDate: startDate,
+                    startTime: "09:00",
+                    endDate: endDate,
+                    endTime: "17:00",
+                    description: desc,
+                    location: ""
+                });
+            });
+
+            if (events.length === 0) {
+                events.push({
+                    id: 'evt_fallback',
+                    title: "未自動解析出明確日期的活動",
+                    startDate: `${BASE_YEAR}-07-11`,
+                    startTime: "09:00",
+                    endDate: `${BASE_YEAR}-07-11`,
+                    endTime: "10:00",
+                    description: "我們未能從您提供的訊息中自動辨識出明確的「西元/民國」日期。已預設建立一個草稿活動供您快速編輯修改！\n\n原訊息：\n" + text,
+                    location: ""
+                });
             }
-            if (currentChunk.length > 0) {
-                chunks.push(currentChunk.join('\n'));
-            }
-            return chunks;
+
+            return events;
         }
 
         function localGongwenParse(text) {
@@ -894,7 +867,6 @@
               }
             ]`;
 
-            // Super highly-compatible 2026 active model fallback pipeline (Resolves 404)
             const modelsToTry = [
                 'gemini-3.5-flash',
                 'gemini-3.1-flash-lite',
@@ -958,7 +930,7 @@
                 }
             }
 
-            throw new Error(`AI 影像視覺解析失敗。原因：${lastError ? lastError.message : '請檢查您的網路或 API Key'}`);
+            throw new Error(`AI 影像視覺解析失敗。原因：${lastError ? lastError.message : '未知錯誤'}`);
         }
 
         async function processImage() {
@@ -991,7 +963,6 @@
                 renderEvents();
                 showToast(`成功解析出 ${currentEvents.length} 個影像行程！`, "fa-circle-check text-emerald-600");
                 
-                // Smart auto scroll to results section on mobile devices
                 setTimeout(() => {
                     const resultsSection = document.getElementById('resultsSection');
                     if (resultsSection) {
@@ -1035,7 +1006,6 @@
               }
             ]`;
 
-            // Super highly-compatible 2026 active model fallback pipeline (Resolves 404)
             const modelsToTry = [
                 'gemini-3.5-flash',
                 'gemini-3.1-flash-lite',
@@ -1092,7 +1062,7 @@
                 }
             }
 
-            throw new Error(`AI 解析失敗。所有支援的 Gemini 模型皆無法連線：${lastError ? lastError.message : '請檢查網路連線或 API 金鑰'}`);
+            throw new Error(`AI 解析失敗。所有支援的 Gemini 模型皆無法連線：${lastError ? lastError.message : '未知錯誤'}`);
         }
 
         async function processMessage(source) {
@@ -1133,7 +1103,6 @@
                 renderEvents();
                 showToast(`成功解析出 ${currentEvents.length} 個行程！`, "fa-circle-check text-emerald-600");
                 
-                // Smart auto scroll to results section on mobile devices
                 setTimeout(() => {
                     const resultsSection = document.getElementById('resultsSection');
                     if (resultsSection) {
@@ -1310,7 +1279,7 @@
                     <div class="flex flex-row md:flex-col gap-2 w-full md:w-auto shrink-0 justify-end pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 flex-wrap">
                         <button onclick="addToGoogleCalendar('${evt.id}')" 
                             class="flex-1 md:flex-none bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border border-emerald-200 text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95">
-                            <i class="fa-brands fa-google text-xs"></i> <span class="inline md:inline">匯入 Google</span>
+                            <i class="fa-brands fa-google text-xs"></i> <span class="inline">匯入 Google</span>
                         </button>
                         <button onclick="exportSingleICS('${evt.id}')" 
                             class="flex-1 md:flex-none bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border border-slate-200 text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95">
@@ -1508,8 +1477,13 @@
         function exportAllICS() {
             if (currentEvents.length === 0) return;
             const icsData = buildIcsContent(currentEvents);
-            downloadBlob(icsData, 'line2cal_all_events.ics');
-            showToast("成功下載批次 ICS 檔案！", "fa-file-circle-check text-emerald-600");
+            downloadBlob(icsData, 'master_calendar_events.ics');
+            showToast("成功打包並下載批次日曆檔！", "fa-file-circle-check text-emerald-600");
+            
+            // Toggle teaching explainer dialog automatically
+            setTimeout(() => {
+                toggleBatchModal();
+            }, 600);
         }
 
         function toggleApiKeyModal() {
