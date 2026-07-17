@@ -19,7 +19,7 @@ https://share.gemini.google/73pXfTFTbvvV
 若您已將本專案部署至 GitHub Pages，可將正式網址填寫於此：
 
 👉 GitHub Pages：
-https://movenorthward.github.io/master-calendar/
+https://github.com/Movenorthward/master-calendar
 
 ---
 
